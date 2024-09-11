@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.resteasy.jetty</groupId>
+        <artifactId>resteasy-jetty-parent</artifactId>
+        <version>1.0.0.Final-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>resteasy-jetty-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>RESTEasy Jetty Maven (BOM)</name>
+    <description/>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>dev.resteasy.jetty</groupId>
+                <artifactId>resteasy-jetty-client</artifactId>
+                <version>${project.version</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>

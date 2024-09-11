@@ -87,7 +87,7 @@
 
         <!-- Plugins versions -->
         <version.org.wildfly.galleon-plugins>7.1.2.Final</version.org.wildfly.galleon-plugins>
-        <version.org.wildfly.plugins.wildfly-maven-plugin>5.0.0.Final</version.org.wildfly.plugins.wildfly-maven-plugin>
+        <version.org.wildfly.plugins.wildfly-maven-plugin>5.0.1.Final</version.org.wildfly.plugins.wildfly-maven-plugin>
 
         <!-- Test options -->
         <additionalJvmArgs>-Djava.io.tmpdir=${project.build.directory}</additionalJvmArgs>

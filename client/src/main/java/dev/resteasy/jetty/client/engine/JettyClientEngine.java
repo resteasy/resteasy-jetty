@@ -1,4 +1,4 @@
-package org.jboss.resteasy.client.jaxrs.engines.jetty;
+package dev.resteasy.jetty.client.engine;
 
 import java.io.InputStream;
 import java.io.OutputStream;

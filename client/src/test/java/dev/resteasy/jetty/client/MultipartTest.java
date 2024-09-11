@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.jboss.resteasy.test.client.jetty;
+package dev.resteasy.jetty.client;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,12 +52,12 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
 
 import org.eclipse.jetty.client.HttpClient;
-import org.jboss.resteasy.client.jaxrs.engines.jetty.JettyClientEngine;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataOutput;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import dev.resteasy.jetty.client.engine.JettyClientEngine;
 import dev.resteasy.junit.extension.annotations.RestBootstrap;
 import dev.resteasy.junit.extension.annotations.RestClientConfig;
 import dev.resteasy.junit.extension.api.RestClientBuilderProvider;

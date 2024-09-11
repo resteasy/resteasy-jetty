@@ -1,4 +1,4 @@
-package org.jboss.resteasy.test.client.jetty;
+package dev.resteasy.jetty.client;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,9 +42,10 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.Callback;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.engines.jetty.JettyClientEngine;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import dev.resteasy.jetty.client.engine.JettyClientEngine;
 
 public class JettyClientEngineTest {
     Server server = new Server(0);

@@ -86,7 +86,7 @@
         <channel.stream.version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}</channel.stream.version>
 
         <!-- Plugins versions -->
-        <version.org.wildfly.galleon-plugins>7.1.2.Final</version.org.wildfly.galleon-plugins>
+        <version.org.wildfly.galleon-plugins>7.2.0.Final</version.org.wildfly.galleon-plugins>
         <version.org.wildfly.plugins.wildfly-maven-plugin>5.0.1.Final</version.org.wildfly.plugins.wildfly-maven-plugin>
 
         <!-- Test options -->

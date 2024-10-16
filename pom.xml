@@ -63,11 +63,12 @@
 
         <!-- Compile to Java 17 -->
         <maven.compiler.release>17</maven.compiler.release>
+        <!-- This is not required, but IDEA checks the properties and expects the maven.compiler.source to match for some reason -->
+        <maven.compiler.source>${maven.compiler.release}</maven.compiler.source>
+        <maven.compiler.target>${maven.compiler.release}</maven.compiler.target>
 
         <!-- Dependency versions -->
         <version.org.jboss.resteasy>6.2.10.Final</version.org.jboss.resteasy>
-        <version.org.wildfly>33.0.0.Final</version.org.wildfly>
-        <version.org.wildfly.wildfly-channel-maven-plugin>1.0.19</version.org.wildfly.wildfly-channel-maven-plugin>
 
         <jboss.home/>
         <!-- print logs to file by default -->
@@ -77,17 +78,6 @@
 
         <maven.test.skip>false</maven.test.skip>
         <skipTests>${maven.test.skip}</skipTests>
-        <wildfly.skip>${skipTests}</wildfly.skip>
-
-        <!-- Provisioning settings -->
-        <galleon.fork.embedded>true</galleon.fork.embedded>
-        <galleon.offline>false</galleon.offline>
-        <!--suppress XmlUnresolvedReference these properties are created via the build-helper-maven-plugin -->
-        <channel.stream.version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}</channel.stream.version>
-
-        <!-- Plugins versions -->
-        <version.org.wildfly.galleon-plugins>7.1.2.Final</version.org.wildfly.galleon-plugins>
-        <version.org.wildfly.plugins.wildfly-maven-plugin>5.0.1.Final</version.org.wildfly.plugins.wildfly-maven-plugin>
 
         <!-- Test options -->
         <additionalJvmArgs>-Djava.io.tmpdir=${project.build.directory}</additionalJvmArgs>
@@ -101,18 +91,6 @@
                     <groupId>org.eclipse.jetty</groupId>
                     <artifactId>jetty-maven-plugin</artifactId>
                     <version>${version.org.eclipse.jetty}</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.wildfly.galleon-plugins</groupId>
-                    <artifactId>wildfly-galleon-maven-plugin</artifactId>
-                    <version>${version.org.wildfly.galleon-plugins}</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.wildfly.plugins</groupId>
-                    <artifactId>wildfly-maven-plugin</artifactId>
-                    <version>${version.org.wildfly.plugins.wildfly-maven-plugin}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -143,23 +121,15 @@
                             <rules>
                                 <bannedDependencies>
                                     <searchTransitive>true</searchTransitive>
-                                    <!-- TODO (jrp) create a real list here -->
                                     <excludes>
                                         <exclude>javax.activation:activation</exclude>
                                         <exclude>javax.activation:javax.activation-api</exclude>
                                         <exclude>javax.enterprise:cdi-api</exclude>
                                         <exclude>javax.inject:javax.inject</exclude>
                                         <exclude>javax.json:javax.json-api</exclude>
-                                        <exclude>javax.persistence:javax.persistence-api</exclude>
-                                        <exclude>javax.persistence:persistence-api</exclude>
-                                        <exclude>javax.security.enterprise:javax.security.enterprise-api</exclude>
                                         <exclude>javax.servlet:servlet-api</exclude>
                                         <exclude>javax.transaction:jta</exclude>
                                         <exclude>javax.validation:validation-api</exclude>
-                                        <exclude>javax.xml:jaxrpc-api</exclude>
-                                        <exclude>javax.xml.bind:jaxb-api</exclude>
-                                        <exclude>javax.xml.soap:saaj-api</exclude>
-                                        <exclude>javax.xml.stream:stax-api</exclude>
                                         <exclude>log4j:log4j</exclude>
                                     </excludes>
                                 </bannedDependencies>

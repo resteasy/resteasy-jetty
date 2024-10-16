@@ -37,14 +37,9 @@
     <properties>
         <version.dev.resteasy.junit.extension>1.0.0.Alpha2</version.dev.resteasy.junit.extension>
 
-        <version.org.jboss.arquillian>1.9.1.Final</version.org.jboss.arquillian>
-        <version.org.jboss.arquillian.container.arquillian-weld-embedded>4.0.0.Final</version.org.jboss.arquillian.container.arquillian-weld-embedded>
         <version.org.jboss.dmr>1.7.0.Final</version.org.jboss.dmr>
-        <version.org.jboss.shrinkwrap.resolver>3.3.1</version.org.jboss.shrinkwrap.resolver>
 
         <version.org.junit>5.11.1</version.org.junit>
-
-        <version.org.wildfly.arquillian>5.1.0.Beta6</version.org.wildfly.arquillian>
     </properties>
 
     <dependencyManagement>
@@ -63,33 +58,6 @@
                 <version>${version.org.junit}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.arquillian</groupId>
-                <artifactId>arquillian-bom</artifactId>
-                <version>${version.org.jboss.arquillian}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.wildfly.arquillian</groupId>
-                <artifactId>wildfly-arquillian-bom</artifactId>
-                <version>${version.org.wildfly.arquillian}</version>
-                <scope>import</scope>
-                <type>pom</type>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.shrinkwrap.resolver</groupId>
-                <artifactId>shrinkwrap-resolver-depchain</artifactId>
-                <version>${version.org.jboss.shrinkwrap.resolver}</version>
-                <type>pom</type>
-                <scope>import</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>javax.enterprise</groupId>
-                        <artifactId>cdi-api</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
             <dependency>

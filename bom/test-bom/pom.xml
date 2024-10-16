@@ -39,7 +39,7 @@
 
         <version.org.jboss.dmr>1.7.0.Final</version.org.jboss.dmr>
 
-        <version.org.junit>5.11.1</version.org.junit>
+        <version.org.junit>5.11.2</version.org.junit>
     </properties>
 
     <dependencyManagement>

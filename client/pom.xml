@@ -67,22 +67,11 @@
             <artifactId>resteasy-junit-extension</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Jakarta JSON implementation -->
-        <!-- <dependency>
-            <groupId>org.eclipse.parsson</groupId>
-            <artifactId>parsson</artifactId>
-            <scope>test</scope>
-        </dependency> -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-       <!--  <dependency>
-            <groupId>org.jboss.logmanager</groupId>
-            <artifactId>jboss-logmanager</artifactId>
-            <scope>test</scope>
-        </dependency> -->
         <!-- Required providers for tests -->
         <dependency>
             <groupId>org.jboss.resteasy</groupId>

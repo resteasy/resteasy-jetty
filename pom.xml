@@ -14,7 +14,7 @@
 
     <groupId>dev.resteasy.jetty</groupId>
     <artifactId>resteasy-jetty-parent</artifactId>
-    <version>1.0.0.Alpha2</version>
+    <version>1.0.0.Alpha3-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>https://resteasy.dev</url>
     <organization>
@@ -53,7 +53,7 @@
         <connection>scm:git:git://github.com/resteasy/resteasy-jetty.git</connection>
         <developerConnection>scm:git:git@github.com:resteasy/resteasy-jetty.git</developerConnection>
         <url>https://github.com/resteasy/resteasy-jetty/tree/main/</url>
-      <tag>v1.0.0.Alpha2</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <issueManagement>

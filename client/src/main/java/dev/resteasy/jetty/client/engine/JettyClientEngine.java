@@ -74,8 +74,12 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
     };
 
     private final HttpClient client;
+    private final long readTimeout;
+    private final TimeUnit readTimeoutUnit;
 
-    public JettyClientEngine(final HttpClient client) {
+    public JettyClientEngine(final HttpClient client, final long readTimeout, final TimeUnit readTimeoutUnit) {
+        this.readTimeout = readTimeout;
+        this.readTimeoutUnit = readTimeoutUnit;
         if (!client.isStarted()) {
             try {
                 client.start();
@@ -128,6 +132,9 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
         final ExecutorService asyncExecutor = invocation.asyncInvocationExecutor();
 
         final Request request = client.newRequest(invocation.getUri());
+        if (readTimeout > 0) {
+            request.timeout(readTimeout, TimeUnit.MILLISECONDS);
+        }
         final CompletableFuture<T> future = new RequestFuture<T>(request);
 
         // Determine if this is a multipart request

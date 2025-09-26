@@ -1,6 +1,6 @@
 = RESTEasy
 
-image:https://github.com/resteasy/resteasy-jetty/actions/workflows/main-build.yml/badge.svg[Build and Test RESTEasy Jetty,link=https://github.com/resteasy/resteasy-jetty/actions/workflows/main-build.yml]
+image:https://github.com/resteasy/resteasy-jetty/actions/workflows/ci.yml/badge.svg[Build and Test RESTEasy Jetty,link=https://github.com/resteasy/resteasy-jetty/actions/workflows/ci.yml]
 
 RESTEasy Jetty is a RESTEasy project aimed to provide integration with https://jetty.org[Eclipse Jetty].
 

@@ -9,7 +9,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>resteasy-client-jetty</artifactId>
+    <artifactId>resteasy-jetty-client</artifactId>
     <name>RESTEasy Client - Jetty Engine</name>
 
     <dependencyManagement>

@@ -31,6 +31,7 @@ printHelp() {
     printArgHelp "-d" "--development" "The next version for the development cycle."
     printArgHelp "-f" "--force" "Forces to allow a SNAPSHOT suffix in release version and not require one for the development version."
     printArgHelp "-h" "--help" "Displays this help."
+    printArgHelp "-p" "--prerelease" "Indicates this is a prerelease and the GitHub release should be marked as such."
     printArgHelp "-r" "--release" "The version to be released. Also used for the tag."
     printArgHelp "" "--dry-run" "Executes the release in as a dry-run. Nothing will be updated or pushed."
     printArgHelp "-v" "--verbose" "Prints verbose output."
@@ -56,6 +57,7 @@ SCRIPT_PATH=$(realpath "${0}")
 SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
 LOCAL_REPO="/tmp/m2/repository/$(basename "${SCRIPT_DIR}")"
 VERBOSE=""
+GH_RELEASE_TYPE="--latest"
 
 MAVEN_ARGS=()
 
@@ -79,6 +81,9 @@ do
         -h|--help)
             printHelp
             exit 0
+            ;;
+        -p|--prerelease)
+            GH_RELEASE_TYPE="--prerelease"
             ;;
         -r|--release)
             RELEASE_VERSION="${2}"
@@ -161,9 +166,9 @@ if [ ${status} = 0 ]; then
             echo "gh release create --generate-notes --latest --verify-tag ${TAG_NAME}"
         else
             if ${DRY_RUN}; then
-            printf "${YELLOW}Dry run would execute:${CLEAR}\ngh release create --generate-notes --latest --verify-tag %s\n" "${TAG_NAME}"
+            printf "${YELLOW}Dry run would execute:${CLEAR}\ngh release create --generate-notes ${GH_RELEASE_TYPE} --verify-tag %s\n" "${TAG_NAME}"
             else
-                gh release create --generate-notes --latest --verify-tag "${TAG_NAME}"
+                gh release create --generate-notes ${GH_RELEASE_TYPE} --verify-tag "${TAG_NAME}"
             fi
         fi
     else

@@ -78,6 +78,11 @@
                 <artifactId>jboss-logging</artifactId>
                 <version>${version.org.jboss.logging}</version>
             </dependency>
+            <dependency>
+                <groupId>org.kohsuke.metainf-services</groupId>
+                <artifactId>metainf-services</artifactId>
+                <version>${version.org.kohsuke.metainf-services}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

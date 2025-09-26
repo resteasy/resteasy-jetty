@@ -51,6 +51,14 @@
             <artifactId>jetty-client</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.kohsuke.metainf-services</groupId>
+            <artifactId>metainf-services</artifactId>
+            <!-- Only needed at compile time for the annotations -->
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>jakarta.servlet</groupId>

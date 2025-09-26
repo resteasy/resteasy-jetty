@@ -32,7 +32,6 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.StreamingOutput;
 
 import org.apache.http.entity.ContentType;
-import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.io.Content;
@@ -41,8 +40,9 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.Callback;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import dev.resteasy.jetty.client.engine.JettyClientEngine;
@@ -64,10 +64,14 @@ public class JettyClientEngineTest {
             server.start();
         }
         if (client == null) {
-            final HttpClient hc = new HttpClient();
-            client = ((ResteasyClientBuilder) ClientBuilder.newBuilder()).httpEngine(new JettyClientEngine(hc)).build();
+            client = ClientBuilder.newClient();
         }
         return client;
+    }
+
+    @Test
+    public void clientCheck() throws Exception {
+        Assertions.assertInstanceOf(JettyClientEngine.class, ((ResteasyClient) client()).httpEngine());
     }
 
     @Test

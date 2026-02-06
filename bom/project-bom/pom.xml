@@ -37,7 +37,7 @@
         <version.jakarta.ee>10.0.0</version.jakarta.ee>
         <version.org.eclipse.jetty>12.0.27</version.org.eclipse.jetty>
         <version.org.jboss.logging>3.6.1.Final</version.org.jboss.logging>
-        <version.org.jboss.resteasy>6.2.14.Final</version.org.jboss.resteasy>
+        <version.org.jboss.resteasy>6.2.15.Final</version.org.jboss.resteasy>
     </properties>
 
     <dependencyManagement>

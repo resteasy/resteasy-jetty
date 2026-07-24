@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -165,18 +166,22 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
         if (entity != null) {
             final OutputStreamRequestContent contentOut = new OutputStreamRequestContent(
                     Objects.toString(invocation.getHeaders().getMediaType(), null));
-            asyncExecutor.execute(() -> {
-                try {
-                    try (OutputStream bodyOut = contentOut.getOutputStream()) {
-                        invocation.writeRequestBody(bodyOut);
+            // A rejection here (executor shut down before the body task is queued) escapes on the
+            // calling thread, leaving the future uncompleted; fail it explicitly instead.
+            try {
+                asyncExecutor.execute(() -> {
+                    try {
+                        try (OutputStream bodyOut = contentOut.getOutputStream()) {
+                            invocation.writeRequestBody(bodyOut);
+                        }
+                    } catch (Exception e) { // Also catch any exception thrown from close
+                        failFuture(future, callback, clientException(e, null));
                     }
-                } catch (Exception e) { // Also catch any exception thrown from close
-                    future.completeExceptionally(e);
-                    if (callback != null) {
-                        callback.failed(e);
-                    }
-                }
-            });
+                });
+            } catch (RejectedExecutionException e) {
+                failFuture(future, callback, clientException(e, null));
+                return future;
+            }
             request.body(contentOut);
         }
 
@@ -192,41 +197,35 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
                 cr.setProperties(invocation.getMutableProperties());
                 cr.setStatus(response.getStatus());
                 cr.setHeaders(extract(response.getHeaders()));
-                asyncExecutor.submit(() -> {
-                    try {
-                        if (buffered) {
-                            cr.bufferEntity();
-                        }
-                        complete(extractor == null ? (T) cr : extractor.extractResult(cr));
-                    } catch (Exception e) {
+                try {
+                    asyncExecutor.submit(() -> {
                         try {
-                            inputStream.close();
-                        } catch (Exception e1) {
-                            e.addSuppressed(e1);
+                            if (buffered) {
+                                cr.bufferEntity();
+                            }
+                            complete(extractor == null ? (T) cr : extractor.extractResult(cr));
+                        } catch (Exception e) {
+                            onFailure(response, closeSuppressing(inputStream, e));
                         }
-                        onFailure(response, e);
-                    }
-                });
+                    });
+                } catch (RejectedExecutionException e) {
+                    // The executor was shut down (e.g. the client was closed) before the completion
+                    // task could be queued. Jetty considers the exchange successful and would swallow
+                    // this exception, leaving the future forever incomplete; fail it explicitly instead.
+                    onFailure(response, closeSuppressing(inputStream, e));
+                }
             }
 
             @Override
             public void onFailure(Response response, Throwable failure) {
                 super.onFailure(response, failure);
-                failed(failure);
+                failFuture(future, callback, clientException(failure, cr));
             }
 
             private void complete(T result) {
                 future.complete(result);
                 if (callback != null) {
                     callback.completed(result);
-                }
-            }
-
-            private void failed(Throwable t) {
-                final RuntimeException x = clientException(t, cr);
-                future.completeExceptionally(x);
-                if (callback != null) {
-                    callback.failed(x);
                 }
             }
         });
@@ -274,6 +273,29 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
         final MultivaluedMap<String, String> extracted = new MultivaluedHashMap<>();
         headers.forEach(h -> extracted.add(h.getName(), h.getValue()));
         return extracted;
+    }
+
+    private static <T> void failFuture(CompletableFuture<T> future, InvocationCallback<T> callback, RuntimeException x) {
+        future.completeExceptionally(x);
+        if (callback != null) {
+            callback.failed(x);
+        }
+    }
+
+    /**
+     * Closes {@code closeable} if non-null, recording any failure as a suppressed exception on
+     * {@code primary}, and returns {@code primary} so it can be passed straight to a failure
+     * handler without losing the original cause.
+     */
+    private static Throwable closeSuppressing(AutoCloseable closeable, Throwable primary) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (Exception e) {
+                primary.addSuppressed(e);
+            }
+        }
+        return primary;
     }
 
     private static RuntimeException clientException(Throwable ex, jakarta.ws.rs.core.Response clientResponse) {

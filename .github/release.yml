@@ -1,0 +1,32 @@
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - question
+      - wontfix
+  categories:
+    - title: Breaking Changes 🚨
+      labels:
+        - breaking-change
+    - title: Security 🔒
+      labels:
+        - security
+    - title: Deprecations ⚠️
+      labels:
+        - deprecation
+    - title: Enhancements ✨
+      labels:
+        - enhancement
+    - title: Bug Fixes 🐛
+      labels:
+        - bug
+    - title: Dependency Updates 📦
+      labels:
+        - dependencies
+    - title: Documentation 📝
+      labels:
+        - documentation
+    - title: Other Changes
+      labels:
+        - "*"

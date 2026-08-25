@@ -39,7 +39,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        java: ['17', '21', '25']
 
     steps:
       - name: Checkout RESTEasy Jetty
@@ -51,32 +50,26 @@ jobs:
       - name: Extract Maven Repo
         shell: bash
         run: tar -xzf resteasy-maven-repository.tar.gz -C ~
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up JDKs
         uses: actions/setup-java@v5
         with:
-          java-version: ${{ matrix.java }}
           distribution: 'temurin'
           cache: 'maven'
-      - name: Build and Test RESTEasy Jety Java ${{ matrix.java }} - ${{ matrix.os }}
+          java-version: |
+            17
+            21
+            25
+            26
+      - name: Build and Test RESTEasy Jetty Java - ${{ matrix.os }}
         run: |
-          mvn clean install -B '-Dversion.org.jboss.resteasy=${{ needs.resteasy-build.outputs.resteasy-version }}'
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: surefire-reports-${{ matrix.os }}-${{ matrix.java }}
-          path: |
-            '**/surefire-reports/'
-      - uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: failsafe-reports-${{ matrix.os }}-${{ matrix.java }}
-          path: |
-            '**/failsafe-reports/'
-      - name: Upload server logs
+          ./mvnw clean install -B '-Dversion.org.jboss.resteasy=${{ needs.resteasy-build.outputs.resteasy-version }}' '-Djava17.home=${{env.JAVA_HOME_17_X64}}' '-Djava21.home=${{env.JAVA_HOME_21_X64}}' '-Djava25.home=${{env.JAVA_HOME_25_X64}}'
+      - name: Upload test logs for failed run
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: server-logs-${{ matrix.os }}-${{ matrix.java }}
+          name: failure-reports-${{ matrix.os }}
           path: |
-            '**/*.log'
+            **/surefire-reports/**
+            **/failsafe-reports/**
+            **/*.log
 

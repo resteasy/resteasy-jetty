@@ -1,4 +1,8 @@
-package dev.resteasy.jetty.client.engine;
+/*
+ * Copyright The RESTEasy Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package dev.resteasy.client.jetty;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -41,9 +45,9 @@ import org.jboss.resteasy.client.jaxrs.engines.AsyncClientHttpEngine;
 import org.jboss.resteasy.client.jaxrs.internal.ClientInvocation;
 import org.jboss.resteasy.client.jaxrs.internal.ClientResponse;
 
-public class JettyClientEngine implements AsyncClientHttpEngine {
+public class JettyClientHttpEngine implements AsyncClientHttpEngine {
 
-    private static final Logger LOGGER = Logger.getLogger(JettyClientEngine.class);
+    private static final Logger LOGGER = Logger.getLogger(JettyClientHttpEngine.class);
     private static final MediaType MULTIPART_WILDCARD = new MediaType("multipart", "*");
     private static final Class<?> MULTIPART_OUTPUT;
 
@@ -59,8 +63,8 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
 
         MULTIPART_OUTPUT = multipartOutput;
     }
-    public static final String REQUEST_TIMEOUT_MS = JettyClientEngine.class + "$RequestTimeout";
-    public static final String IDLE_TIMEOUT_MS = JettyClientEngine.class + "$IdleTimeout";
+    public static final String REQUEST_TIMEOUT_MS = JettyClientHttpEngine.class + "$RequestTimeout";
+    public static final String IDLE_TIMEOUT_MS = JettyClientHttpEngine.class + "$IdleTimeout";
     // Yeah, this is the Jersey one, but there's no standard one and it makes more sense to reuse than make our own...
     public static final String FOLLOW_REDIRECTS = "jersey.config.client.followRedirects";
 
@@ -78,7 +82,7 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
     private final long readTimeout;
     private final TimeUnit readTimeoutUnit;
 
-    public JettyClientEngine(final HttpClient client, final long readTimeout, final TimeUnit readTimeoutUnit) {
+    public JettyClientHttpEngine(final HttpClient client, final long readTimeout, final TimeUnit readTimeoutUnit) {
         this.readTimeout = readTimeout;
         this.readTimeoutUnit = readTimeoutUnit;
         if (!client.isStarted()) {
@@ -321,14 +325,14 @@ public class JettyClientEngine implements AsyncClientHttpEngine {
         if (System.getSecurityManager() == null) {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) {
-                cl = JettyClientEngine.class.getClassLoader();
+                cl = JettyClientHttpEngine.class.getClassLoader();
             }
             return cl == null ? ClassLoader.getSystemClassLoader() : cl;
         }
         return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> {
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
             if (cl == null) {
-                cl = JettyClientEngine.class.getClassLoader();
+                cl = JettyClientHttpEngine.class.getClassLoader();
             }
             return cl == null ? ClassLoader.getSystemClassLoader() : cl;
         });

@@ -1,4 +1,8 @@
-package dev.resteasy.jetty.client;
+/*
+ * Copyright The RESTEasy Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package dev.resteasy.client.jetty;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,8 +59,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import dev.resteasy.jetty.client.engine.JettyClientEngine;
-
 public class JettyClientEngineTest {
     Server server = new Server(0);
     Client client;
@@ -81,7 +83,7 @@ public class JettyClientEngineTest {
 
     @Test
     public void clientCheck() throws Exception {
-        Assertions.assertInstanceOf(JettyClientEngine.class, ((ResteasyClient) client()).httpEngine());
+        Assertions.assertInstanceOf(JettyClientHttpEngine.class, ((ResteasyClient) client()).httpEngine());
     }
 
     @Test
@@ -236,7 +238,7 @@ public class JettyClientEngineTest {
 
         try {
             client().target(baseUri()).request()
-                    .property(JettyClientEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(500))
+                    .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(500))
                     .get();
             fail();
         } catch (ProcessingException e) {
@@ -264,8 +266,8 @@ public class JettyClientEngineTest {
 
         try {
             client().target(baseUri()).request()
-                    .property(JettyClientEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
-                    .property(JettyClientEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(500))
+                    .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
+                    .property(JettyClientHttpEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(500))
                     .get();
             fail();
         } catch (ProcessingException e) {
@@ -273,8 +275,8 @@ public class JettyClientEngineTest {
         }
 
         final Response response = client().target(baseUri()).request()
-                .property(JettyClientEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
-                .property(JettyClientEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(1500))
+                .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
+                .property(JettyClientHttpEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(1500))
                 .get();
 
         assertEquals(200, response.getStatus());
@@ -385,7 +387,7 @@ public class JettyClientEngineTest {
     private static ResteasyClient clientWithExecutor(final ExecutorService executor) {
         return (ResteasyClient) new ResteasyClientBuilderImpl()
                 .executorService(executor)
-                .httpEngine(new JettyClientEngine(new HttpClient(), 0, TimeUnit.MILLISECONDS))
+                .httpEngine(new JettyClientHttpEngine(new HttpClient(), 0, TimeUnit.MILLISECONDS))
                 .build();
     }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package dev.resteasy.jetty.client.engine;
+package dev.resteasy.client.jetty;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -82,6 +82,6 @@ public class JettyClientHttpEngineFactory implements ClientHttpEngineFactory {
         }
 
         httpClient.setFollowRedirects(configuration.isFollowRedirects());
-        return new JettyClientEngine(httpClient, configuration.readTimeout(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
+        return new JettyClientHttpEngine(httpClient, configuration.readTimeout(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     }
 }

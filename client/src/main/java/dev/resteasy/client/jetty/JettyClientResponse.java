@@ -1,4 +1,8 @@
-package dev.resteasy.jetty.client.engine;
+/*
+ * Copyright The RESTEasy Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package dev.resteasy.client.jetty;
 
 import java.io.InputStream;
 

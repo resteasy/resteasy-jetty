@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package dev.resteasy.jetty.client;
+package dev.resteasy.client.jetty;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -31,18 +31,18 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v6
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up Java
         uses: actions/setup-java@v5
         with:
-          java-version: 21
+          java-version: 25
           cache: 'maven'
           distribution: 'temurin'
       - name: Generate JavaDoc
-        run: mvn -B -ntp clean -Prelease javadoc:aggregate
+        run: ./mvnw -B -ntp clean -Pcentral-release javadoc:aggregate
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          # Upload the JavaDoc's
+          # Upload the Javadoc's
           path: 'target/reports/apidocs/'
 
   deploy:

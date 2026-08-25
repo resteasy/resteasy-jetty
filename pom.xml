@@ -74,7 +74,7 @@
         <version.org.kohsuke.metainf-services>1.11</version.org.kohsuke.metainf-services>
 
         <!-- Plugins versions -->
-        <version.central.publishing.maven.plugin>0.8.0</version.central.publishing.maven.plugin>
+        <version.central.publishing.maven.plugin>0.11.0</version.central.publishing.maven.plugin>
         <version.formatter.maven.plugin>2.29.0</version.formatter.maven.plugin>
         <version.impsort.maven.plugin>1.12.0</version.impsort.maven.plugin>
 

@@ -24,50 +24,44 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
-import jakarta.ws.rs.ApplicationPath;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.FormParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.ServerErrorException;
-import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.client.Invocation;
-import jakarta.ws.rs.core.Application;
+import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.EntityPart;
 import jakarta.ws.rs.core.GenericEntity;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.UriBuilder;
 
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataOutput;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import dev.resteasy.junit.extension.annotations.RequestPath;
 import dev.resteasy.junit.extension.annotations.RestBootstrap;
+import dev.resteasy.junit.extension.annotations.RestResource;
 
 /**
  * @author <a href="mailto:jperkins@redhat.com">James R. Perkins</a>
  */
-@RestBootstrap(MultipartTest.TestApplication.class)
+@RestBootstrap(MultipartTest.TestResource.class)
 public class MultipartTest {
 
-    @Inject
-    private Client client;
-
     @Test
-    public void checkEntityPart(final UriBuilder uriBuilder) throws IOException {
+    public void checkEntityPart(@RestResource @RequestPath("/echo/entity-parts") final WebTarget target) throws IOException {
         // Create the entity parts for the request
         final List<EntityPart> multipart = List.of(
                 EntityPart.withName("name")
@@ -83,8 +77,7 @@ public class MultipartTest {
                         .mediaType(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                         .build());
         try (
-                Response response = client.target(uriBuilder.path("/echo/entity-parts"))
-                        .request(MediaType.APPLICATION_JSON_TYPE)
+                Response response = target.request(MediaType.APPLICATION_JSON_TYPE)
                         .post(Entity.entity(new GenericEntity<>(multipart) {
                         }, MediaType.MULTIPART_FORM_DATA_TYPE))) {
             assertResponse(response);
@@ -92,14 +85,13 @@ public class MultipartTest {
     }
 
     @Test
-    public void checkMultipartFormData(final UriBuilder uriBuilder) {
+    public void checkMultipartFormData(@RestResource @RequestPath("/echo/multipart-form-data") final WebTarget target) {
         final var multipart = new MultipartFormDataOutput();
         multipart.addFormData("name", "RESTEasy", MediaType.TEXT_PLAIN_TYPE);
         multipart.addFormData("entity", "plain text", MediaType.APPLICATION_OCTET_STREAM_TYPE);
         multipart.addFormData("data", "test", MediaType.APPLICATION_OCTET_STREAM_TYPE, "data.txt");
         final var multipartEntity = Entity.entity(multipart, MediaType.MULTIPART_FORM_DATA);
-        final Invocation invocation = client.target(uriBuilder.path("/echo/multipart-form-data"))
-                .request()
+        final Invocation invocation = target.request()
                 .buildPost(multipartEntity);
         try (Response response = invocation.invoke()) {
             assertResponse(response);
@@ -117,15 +109,6 @@ public class MultipartTest {
         Assertions.assertNotNull(contentType, () -> String.format("Failed to find content-type in %s", headers));
         Assertions.assertTrue(contentType.toString().contains("boundary"),
                 () -> String.format("Failed to find boundary in %s", contentType));
-    }
-
-    @ApplicationPath("/")
-    @ApplicationScoped
-    public static class TestApplication extends Application {
-        @Override
-        public Set<Class<?>> getClasses() {
-            return Set.of(TestResource.class);
-        }
     }
 
     @Path("/echo")

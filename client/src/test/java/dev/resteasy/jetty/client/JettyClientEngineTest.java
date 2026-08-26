@@ -2,10 +2,11 @@
  * Copyright The RESTEasy Authors
  * SPDX-License-Identifier: Apache-2.0
  */
-package dev.resteasy.client.jetty;
+package dev.resteasy.jetty.client;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -38,6 +40,7 @@ import jakarta.ws.rs.client.ClientResponseContext;
 import jakarta.ws.rs.client.ClientResponseFilter;
 import jakarta.ws.rs.client.CompletionStageRxInvoker;
 import jakarta.ws.rs.client.Entity;
+import jakarta.ws.rs.client.Invocation;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -238,7 +241,7 @@ public class JettyClientEngineTest {
 
         try {
             client().target(baseUri()).request()
-                    .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(500))
+                    .property(JettyClientProperties.REQUEST_TIMEOUT, Duration.ofMillis(500))
                     .get();
             fail();
         } catch (ProcessingException e) {
@@ -266,8 +269,8 @@ public class JettyClientEngineTest {
 
         try {
             client().target(baseUri()).request()
-                    .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
-                    .property(JettyClientHttpEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(500))
+                    .property(JettyClientProperties.REQUEST_TIMEOUT, Duration.ofMillis(2000))
+                    .property(JettyClientProperties.IDLE_TIMEOUT, Duration.ofMillis(500))
                     .get();
             fail();
         } catch (ProcessingException e) {
@@ -275,8 +278,8 @@ public class JettyClientEngineTest {
         }
 
         final Response response = client().target(baseUri()).request()
-                .property(JettyClientHttpEngine.REQUEST_TIMEOUT_MS, Duration.ofMillis(2000))
-                .property(JettyClientHttpEngine.IDLE_TIMEOUT_MS, Duration.ofMillis(1500))
+                .property(JettyClientProperties.REQUEST_TIMEOUT, Duration.ofMillis(2000))
+                .property(JettyClientProperties.IDLE_TIMEOUT, Duration.ofMillis(1500))
                 .get();
 
         assertEquals(200, response.getStatus());
@@ -288,9 +291,12 @@ public class JettyClientEngineTest {
      * If the async executor is shut down while a request is in flight, the completion task
      * submitted from {@code onHeaders} is rejected. Jetty treats the exchange as successful and
      * swallows that {@link java.util.concurrent.RejectedExecutionException}, so the response
-     * future was previously left forever incomplete and the synchronous caller hung on the
-     * engine's one-hour {@code future.get}. The engine must instead fail the future, so the call
-     * returns promptly with an error.
+     * future was previously left forever incomplete. This path is only reachable via the async
+     * {@code submit(...)} entry points --
+     * {@link org.jboss.resteasy.client.jaxrs.ClientHttpEngine#invoke(Invocation)} processes the response
+     * directly on the calling thread and never touches the async executor for a GET with no
+     * entity, so a plain synchronous call would no longer exercise this at all. The engine must
+     * fail the future, so the async call completes exceptionally promptly instead of hanging.
      */
     @Test
     public void testExecutorShutdownWhileInFlightDoesNotHang() throws Exception {
@@ -317,9 +323,11 @@ public class JettyClientEngineTest {
         }
         client = clientWithExecutor(executor);
 
-        assertTimeoutPreemptively(Duration.ofSeconds(15),
-                () -> assertThrows(ProcessingException.class, () -> client.target(baseUri()).request().get(String.class)),
-                "synchronous call must fail fast, not hang on the engine's one-hour future.get");
+        final Future<String> future = client.target(baseUri()).request().buildGet().submit(String.class);
+        assertTimeoutPreemptively(Duration.ofSeconds(15), () -> {
+            final ExecutionException ee = assertThrows(ExecutionException.class, future::get);
+            assertInstanceOf(ProcessingException.class, ee.getCause());
+        }, "async call must fail fast, not hang on a swallowed rejection");
         // Prove the failure was produced by the guarded reject-at-onHeaders path, not some other
         // fast failure, so the test cannot pass for the wrong reason.
         assertTrue(executor.rejectedAfterShutdown(),
@@ -331,7 +339,7 @@ public class JettyClientEngineTest {
      * carries no entity, so there is never a body read that a request timeout or idle timeout could
      * interrupt. The exchange completes cleanly from Jetty's point of view the instant the (empty)
      * response arrives, so the swallowed rejection can only be caught by the engine's own guard --
-     * no timeout can rescue this shape. The call must still fail fast rather than hang.
+     * no timeout can rescue this shape. The async call must still fail fast rather than hang.
      */
     @Test
     public void testExecutorShutdownWithEmptyBodyDoesNotHang() throws Exception {
@@ -354,9 +362,11 @@ public class JettyClientEngineTest {
         }
         client = clientWithExecutor(executor);
 
-        assertTimeoutPreemptively(Duration.ofSeconds(15),
-                () -> assertThrows(ProcessingException.class, () -> client.target(baseUri()).request().get()),
-                "empty-body call must fail fast; no timeout can rescue a body-less response");
+        final Future<Response> future = client.target(baseUri()).request().buildGet().submit();
+        assertTimeoutPreemptively(Duration.ofSeconds(15), () -> {
+            final ExecutionException ee = assertThrows(ExecutionException.class, future::get);
+            assertInstanceOf(ProcessingException.class, ee.getCause());
+        }, "empty-body async call must fail fast; no timeout can rescue a body-less response");
         assertTrue(executor.rejectedAfterShutdown(),
                 "expected the onHeaders completion submit to be rejected by the shut-down executor");
     }

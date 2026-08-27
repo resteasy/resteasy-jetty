@@ -78,7 +78,7 @@
         <version.org.kohsuke.metainf-services>1.11</version.org.kohsuke.metainf-services>
 
         <!-- Plugins versions -->
-        <version.spotless-maven-plugin>3.9.0</version.spotless-maven-plugin>
+        <version.spotless-maven-plugin>3.10.0</version.spotless-maven-plugin>
 
         <!-- maven-release-plugin configuration -->
         <autoVersionSubmodules>true</autoVersionSubmodules>

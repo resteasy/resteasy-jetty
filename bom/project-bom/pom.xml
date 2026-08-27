@@ -23,7 +23,7 @@
         <version.jakarta.ee>11.0.0</version.jakarta.ee>
         <version.org.eclipse.jetty>12.1.12</version.org.eclipse.jetty>
         <version.org.jboss.logging>3.6.3.Final</version.org.jboss.logging>
-        <version.org.jboss.resteasy>7.0.3.Final</version.org.jboss.resteasy>
+        <version.org.jboss.weld>6.0.4.Final</version.org.jboss.weld>
     </properties>
 
     <dependencyManagement>
@@ -58,6 +58,14 @@
             </dependency>
 
             <dependency>
+                <groupId>org.eclipse.jetty.ee11</groupId>
+                <artifactId>jetty-ee11-bom</artifactId>
+                <version>${version.org.eclipse.jetty}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <dependency>
                 <groupId>org.jboss.logging</groupId>
                 <artifactId>jboss-logging</artifactId>
                 <version>${version.org.jboss.logging}</version>
@@ -66,6 +74,17 @@
                 <groupId>org.kohsuke.metainf-services</groupId>
                 <artifactId>metainf-services</artifactId>
                 <version>${version.org.kohsuke.metainf-services}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jboss.weld.se</groupId>
+                <artifactId>weld-se-core</artifactId>
+                <version>${version.org.jboss.weld}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.weld.servlet</groupId>
+                <artifactId>weld-servlet-core</artifactId>
+                <version>${version.org.jboss.weld}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

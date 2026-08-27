@@ -52,6 +52,7 @@
         <module>bom/project-bom</module>
         <module>bom/test-bom</module>
         <module>client</module>
+        <module>embedded-server</module>
     </modules>
 
     <scm>
@@ -75,6 +76,7 @@
         <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
 
         <!-- Dependency versions -->
+        <version.org.jboss.resteasy>7.0.3.Final</version.org.jboss.resteasy>
         <version.org.kohsuke.metainf-services>1.11</version.org.kohsuke.metainf-services>
 
         <!-- Plugins versions -->

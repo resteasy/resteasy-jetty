@@ -20,10 +20,8 @@
 
     <properties>
         <version.dev.resteasy.junit.extension>1.0.0.Beta6</version.dev.resteasy.junit.extension>
-
-        <version.org.jboss.dmr>1.7.0.Final</version.org.jboss.dmr>
-
-        <version.org.junit>5.13.4</version.org.junit>
+        <version.org.eclipse.parsson>1.1.9</version.org.eclipse.parsson>
+        <version.org.junit>6.1.2</version.org.junit>
     </properties>
 
     <dependencyManagement>
@@ -45,9 +43,22 @@
             </dependency>
 
             <dependency>
+                <groupId>org.eclipse.parsson</groupId>
+                <artifactId>parsson</artifactId>
+                <version>${version.org.eclipse.parsson}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
                 <groupId>dev.resteasy.junit.extension</groupId>
                 <artifactId>resteasy-junit-extension</artifactId>
                 <version>${version.dev.resteasy.junit.extension}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.resteasy</groupId>
+                <artifactId>resteasy-embedded-server-tests</artifactId>
+                <version>${version.org.jboss.resteasy}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

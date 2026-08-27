@@ -1,0 +1,48 @@
+= RESTEasy Jetty Integration Reference Guide
+:doctype: book
+:sectnums:
+:toc: left
+:icons: font
+:experimental:
+:sourcedir: .
+
+== Introduction
+
+RESTEasy Jetty provides integration between https://resteasy.dev[RESTEasy] and https://jetty.org[Eclipse Jetty], bringing Jakarta RESTful Web Services to Jetty's HTTP client and server.
+The project consists of several modules:
+
+* **resteasy-jetty-client** -- A RESTEasy client HTTP engine backed by the Jetty `HttpClient`, discovered automatically by RESTEasy's `ClientBuilder`
+* **resteasy-jetty-embedded-server** -- An embedded HTTP server using Jetty and the standard `SeBootstrap` API, with a CDI (Weld) container to resolve Jakarta REST components
+
+=== Version Information
+
+This guide is for RESTEasy Jetty Integration version *{project-version}*.
+
+* link:apidocs/[Javadoc API Reference]
+* For the main RESTEasy documentation, see https://docs.resteasy.dev[docs.resteasy.dev].
+
+=== Maven Dependencies
+
+RESTEasy Jetty publishes a BOM that manages the versions of every module.
+Import it into your `dependencyManagement` so you can depend on the individual artifacts without specifying versions:
+
+[source,xml,subs="attributes+"]
+----
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.resteasy.jetty</groupId>
+            <artifactId>resteasy-jetty-bom</artifactId>
+            <version>{project-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+----
+
+The individual module dependencies are described in the chapters that follow.
+
+include::client.adoc[]
+
+include::embedded-server.adoc[]

@@ -1,0 +1,111 @@
+[[client-engine]]
+
+== Client Engine
+
+The client engine backs a standard Jakarta REST client with Eclipse Jetty's `HttpClient`, adding support for asynchronous invocations, HTTP/2, and Jetty-specific tuning while remaining a drop-in replacement for the default RESTEasy client transport.
+
+=== Maven Dependency
+
+Add the client artifact (versions are managed by the BOM described in the introduction):
+
+[source,xml]
+----
+<dependency>
+    <groupId>dev.resteasy.jetty</groupId>
+    <artifactId>resteasy-jetty-client</artifactId>
+</dependency>
+----
+
+=== Usage
+
+The engine is registered as a Jakarta REST `ClientHttpEngineFactory` service provider.
+RESTEasy's `ClientBuilder` discovers it automatically via `ServiceLoader`, so simply having `resteasy-jetty-client` on the classpath is enough -- no code needs to reference the Jetty classes directly:
+
+[source,java]
+----
+try (Client client = ClientBuilder.newClient()) {
+    String result = client.target("https://example.com/api/resource")
+            .request()
+            .get(String.class);
+}
+----
+
+Because the engine implements RESTEasy's `AsyncClientHttpEngine`, asynchronous and reactive invocations are executed on Jetty's non-blocking transport:
+
+[source,java]
+----
+try (Client client = ClientBuilder.newClient()) {
+    CompletionStage<String> result = client.target("https://example.com/api/resource")
+            .request()
+            .rx()
+            .get(String.class);
+}
+----
+
+Cancelling the returned `Future`/`CompletableFuture` aborts the underlying Jetty exchange.
+
+=== HTTP/2
+
+The client transport is configured to negotiate HTTP/2 over TLS via ALPN when the server supports it, falling back to HTTP/1.1 otherwise.
+Plaintext (non-TLS) requests default to HTTP/1.1, since cleartext HTTP/2 (h2c) is not negotiated and most servers do not speak it.
+
+=== Configuration
+
+Most client behavior is derived from the standard `ClientBuilder` configuration and translated onto the Jetty `HttpClient`:
+
+[cols="1,3",options="header"]
+|===
+| `ClientBuilder` setting
+| Effect
+
+| SSL context / SNI host names
+| Configures Jetty's `SslContextFactory.Client`, including an SNI provider when SNI host names are supplied.
+
+| Connection timeout
+| Sets the Jetty connect timeout.
+
+| Connection idle time
+| Sets the connector idle timeout.
+
+| Read timeout
+| Applied as the default per-exchange timeout.
+
+| Proxy host / port / scheme
+| Registers an `HttpProxy` on the client's proxy configuration (secure when the scheme is `https`).
+
+| Cookie management
+| Enables Jetty's default cookie store, or an empty (no-op) store when disabled.
+
+| Follow redirects
+| Toggles automatic redirect following.
+|===
+
+==== Per-request Properties
+
+Two timeouts can be overridden for an individual request through Jakarta REST invocation properties, defined as constants on `JettyClientProperties`.
+Each accepts a `java.time.Duration`, a `Number` (interpreted as milliseconds), or a string parseable as a `long`.
+
+[cols="1,1,2",options="header"]
+|===
+| Property constant
+| Value
+| Description
+
+| `JettyClientProperties.REQUEST_TIMEOUT`
+| `dev.resteasy.jetty.client.request.timeout`
+| Overrides the total exchange timeout for that request.
+
+| `JettyClientProperties.IDLE_TIMEOUT`
+| `dev.resteasy.jetty.client.idle.timeout`
+| Overrides the idle timeout for that request -- the maximum gap allowed between bytes before the exchange is considered stalled. A connection can stay open indefinitely as long as it keeps making progress within this gap.
+|===
+
+[source,java]
+----
+try (Client client = ClientBuilder.newClient()) {
+    String result = client.target("https://example.com/api/resource")
+            .request()
+            .property(JettyClientProperties.REQUEST_TIMEOUT, Duration.ofSeconds(30))
+            .get(String.class);
+}
+----

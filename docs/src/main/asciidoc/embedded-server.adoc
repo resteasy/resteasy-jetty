@@ -1,0 +1,74 @@
+[[embedded-server]]
+
+== Embedded Server
+
+The embedded server runs Jakarta REST resources on an in-process Eclipse Jetty server. It deploys the RESTEasy servlet
+dispatcher to a Jetty `ServletContextHandler` and bootstraps a CDI (Weld SE) container that is used to resolve Jakarta
+REST components, making it well suited for tests and standalone applications.
+
+=== Maven Dependency
+
+Add the embedded server artifact (versions are managed by the BOM described in the introduction):
+
+[source,xml]
+----
+<dependency>
+    <groupId>dev.resteasy.jetty</groupId>
+    <artifactId>resteasy-jetty-embedded-server</artifactId>
+</dependency>
+----
+
+=== Usage
+
+The server is registered as a RESTEasy `EmbeddedServer` service provider and is discovered through the standard `SeBootstrap` entry point.
+Configure the deployment with a Jakarta REST `Application` and start it via `SeBootstrap`:
+
+[source,java]
+----
+SeBootstrap.Configuration configuration = SeBootstrap.Configuration.builder()
+        .host("localhost")
+        .port(8080)
+        .build();
+
+SeBootstrap.Instance instance = SeBootstrap.start(MyApplication.class, configuration)
+    .toCompletableFuture()
+    .join();
+
+// Stop the server
+instance.stop().toCompletableFuture().join();
+----
+
+=== CDI Integration
+
+On start, the server bootstraps a Weld SE container and uses it to back the RESTEasy `InjectorFactory`, so Jakarta REST resources and providers are CDI managed beans.
+The following annotations are registered as bean-defining annotations, meaning classes annotated with them are automatically discovered as beans:
+
+* `jakarta.ws.rs.Path`
+* `jakarta.ws.rs.ext.Provider`
+* `jakarta.ws.rs.ApplicationPath`
+
+Jetty is also configured to inject CDI managed beans into the servlets, filters, and listeners it creates itself, and the CDI request scope is activated around each request.
+
+=== Transport and TLS
+
+The connector negotiates HTTP/2 alongside HTTP/1.1:
+
+* For plaintext connections, cleartext HTTP/2 (h2c) is enabled -- via upgrade or prior knowledge -- alongside HTTP/1.1.
+* When the configured protocol is `HTTPS`, HTTP/2 is negotiated over TLS via ALPN, falling back to HTTP/1.1 for clients that do not support it.
+
+For HTTPS, the SSL context is taken from the `SeBootstrap.Configuration`, and client authentication is honored according to the configuration's SSL client authentication mode:
+
+[cols="1,2",options="header"]
+|===
+| Mode
+| Behavior
+
+| `MANDATORY`
+| Client authentication is required (`setNeedClientAuth`).
+
+| `OPTIONAL`
+| Client authentication is requested but not required (`setWantClientAuth`).
+
+| `NONE`
+| Client authentication is not requested.
+|===

@@ -53,6 +53,7 @@
         <module>bom/test-bom</module>
         <module>client</module>
         <module>embedded-server</module>
+        <module>docs</module>
     </modules>
 
     <scm>

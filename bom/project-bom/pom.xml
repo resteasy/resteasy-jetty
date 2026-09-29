@@ -23,7 +23,7 @@
         <version.jakarta.ee>11.0.0</version.jakarta.ee>
         <version.org.eclipse.jetty>12.1.12</version.org.eclipse.jetty>
         <version.org.jboss.logging>3.6.3.Final</version.org.jboss.logging>
-        <version.org.jboss.weld>6.0.4.Final</version.org.jboss.weld>
+        <version.org.jboss.weld>7.0.0.Final</version.org.jboss.weld>
     </properties>
 
     <dependencyManagement>

@@ -127,7 +127,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
         // handler once the unread response backs up enough to stall the handler's own request read.
         attachEntity(clientInvocation, request, clientInvocation.asyncInvocationExecutor());
 
-        final InputStreamResponseListener listener = new InputStreamResponseListener();
+        final InputStreamResponseListener listener = new BodyKeepingResponseListener();
         request.send(listener);
         try {
             final Response response = listener.get(blockingTimeoutMs(request), TimeUnit.MILLISECONDS);
@@ -202,52 +202,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
         });
         attachEntity(invocation, request, asyncExecutor);
 
-        request.send(new InputStreamResponseListener() {
-            private ClientResponse cr;
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public void onHeaders(final Response response) {
-                super.onHeaders(response);
-                final InputStream inputStream = getInputStream();
-                try {
-                    cr = buildClientResponse(invocation, response, inputStream);
-                } catch (RuntimeException e) {
-                    onFailure(response, closeSuppressing(inputStream, e));
-                    return;
-                }
-                try {
-                    asyncExecutor.submit(() -> {
-                        try {
-                            if (buffered) {
-                                cr.bufferEntity();
-                            }
-                            complete(extractor == null ? (T) cr : extractor.extractResult(cr));
-                        } catch (Exception e) {
-                            onFailure(response, closeSuppressing(inputStream, e));
-                        }
-                    });
-                } catch (RejectedExecutionException e) {
-                    // The executor was shut down (e.g. the client was closed) before the completion
-                    // task could be queued. Jetty considers the exchange successful and would swallow
-                    // this exception, leaving the future forever incomplete; fail it explicitly instead.
-                    onFailure(response, closeSuppressing(inputStream, e));
-                }
-            }
-
-            @Override
-            public void onFailure(final Response response, final Throwable failure) {
-                super.onFailure(response, failure);
-                failFuture(future, callback, clientException(failure, cr));
-            }
-
-            private void complete(final T result) {
-                future.complete(result);
-                if (callback != null) {
-                    callback.completed(result);
-                }
-            }
-        });
+        request.send(new AsyncResponseListener<>(invocation, buffered, callback, extractor, future, asyncExecutor));
         return future;
     }
 
@@ -365,7 +320,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * Converts Jetty's {@link HttpFields} into the {@link MultivaluedMap} shape RESTEasy's
      * {@link ClientResponse} expects.
      */
-    private MultivaluedMap<String, String> extract(final HttpFields headers) {
+    private static MultivaluedMap<String, String> extract(final HttpFields headers) {
         final MultivaluedMap<String, String> extracted = new MultivaluedHashMap<>();
         headers.forEach(h -> extracted.add(h.getName(), h.getValue()));
         return extracted;
@@ -375,7 +330,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * Builds a {@link ClientResponse} backed by {@code inputStream}, populated with {@code invocation}'s
      * mutable properties and {@code response}'s status and headers.
      */
-    private ClientResponse buildClientResponse(final ClientInvocation invocation, final Response response,
+    static ClientResponse buildClientResponse(final ClientInvocation invocation, final Response response,
             final InputStream inputStream) {
         final ClientResponse clientResponse = new JettyClientResponse(invocation.getClientConfiguration(), inputStream);
         clientResponse.setProperties(invocation.getMutableProperties());
@@ -388,7 +343,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * Completes {@code future} exceptionally with {@code x} and, if {@code callback} is given,
      * invokes {@link InvocationCallback#failed(Throwable)} on it too.
      */
-    private static <T> void failFuture(final CompletableFuture<T> future, final InvocationCallback<T> callback,
+    static <T> void failFuture(final CompletableFuture<T> future, final InvocationCallback<T> callback,
             final RuntimeException x) {
         future.completeExceptionally(x);
         if (callback != null) {
@@ -401,7 +356,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * {@code primary}, and returns {@code primary} so it can be passed straight to a failure
      * handler without losing the original cause.
      */
-    private static Throwable closeSuppressing(final AutoCloseable closeable, final Throwable primary) {
+    static Throwable closeSuppressing(final AutoCloseable closeable, final Throwable primary) {
         if (closeable != null) {
             try {
                 closeable.close();
@@ -419,7 +374,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * {@code ex} (should not normally happen) is turned into a {@link ProcessingException} wrapping
      * a fresh {@link NullPointerException} rather than throwing one directly.
      */
-    private static RuntimeException clientException(final Throwable ex, final jakarta.ws.rs.core.Response clientResponse) {
+    static RuntimeException clientException(final Throwable ex, final jakarta.ws.rs.core.Response clientResponse) {
         RuntimeException ret;
         if (ex == null) {
             final NullPointerException e = new NullPointerException();

@@ -8,6 +8,8 @@ import static dev.resteasy.jetty.client.JettyClientProperties.IDLE_TIMEOUT;
 import static dev.resteasy.jetty.client.JettyClientProperties.REQUEST_TIMEOUT;
 import static org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder.PROPERTY_FOLLOW_REDIRECTS;
 
+import java.io.FilterOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.security.AccessController;
@@ -38,7 +40,6 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.InputStreamResponseListener;
 import org.eclipse.jetty.client.OutputStreamRequestContent;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.client.Response;
@@ -125,10 +126,11 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
         // for example) can only make progress if both directions are being drained at once. Doing
         // the write synchronously here first, then waiting for the response, can deadlock on such a
         // handler once the unread response backs up enough to stall the handler's own request read.
-        attachEntity(clientInvocation, request, clientInvocation.asyncInvocationExecutor());
+        final OutputStreamRequestContent contentOut = attachEntity(clientInvocation, request);
 
-        final InputStreamResponseListener listener = new InputStreamResponseListener();
+        final BodyKeepingResponseListener listener = new BodyKeepingResponseListener(client, contentOut);
         request.send(listener);
+        writeEntity(clientInvocation, request, contentOut, clientInvocation.asyncInvocationExecutor());
         try {
             final Response response = listener.get(blockingTimeoutMs(request), TimeUnit.MILLISECONDS);
             final InputStream inputStream = listener.getInputStream();
@@ -184,7 +186,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
 
     /**
      * Shared implementation backing both {@code submit} overloads: builds and sends the request,
-     * then, once Jetty delivers the response headers, builds the {@link ClientResponse} and
+     * then, once the outcome of the call is a response, builds the {@link ClientResponse} and
      * dispatches the rest of the processing (buffering, extraction, callback) onto
      * {@code asyncExecutor}, completing {@code future} with the result or failure.
      */
@@ -199,63 +201,23 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
             if (e != null) {
                 request.abort(e);
             }
-        });
-        attachEntity(invocation, request, asyncExecutor);
-
-        request.send(new InputStreamResponseListener() {
-            private ClientResponse cr;
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public void onHeaders(final Response response) {
-                super.onHeaders(response);
-                final InputStream inputStream = getInputStream();
-                try {
-                    cr = buildClientResponse(invocation, response, inputStream);
-                } catch (RuntimeException e) {
-                    onFailure(response, closeSuppressing(inputStream, e));
-                    return;
-                }
-                try {
-                    asyncExecutor.submit(() -> {
-                        try {
-                            if (buffered) {
-                                cr.bufferEntity();
-                            }
-                            complete(extractor == null ? (T) cr : extractor.extractResult(cr));
-                        } catch (Exception e) {
-                            onFailure(response, closeSuppressing(inputStream, e));
-                        }
-                    });
-                } catch (RejectedExecutionException e) {
-                    // The executor was shut down (e.g. the client was closed) before the completion
-                    // task could be queued. Jetty considers the exchange successful and would swallow
-                    // this exception, leaving the future forever incomplete; fail it explicitly instead.
-                    onFailure(response, closeSuppressing(inputStream, e));
-                }
-            }
-
-            @Override
-            public void onFailure(final Response response, final Throwable failure) {
-                super.onFailure(response, failure);
-                failFuture(future, callback, clientException(failure, cr));
-            }
-
-            private void complete(final T result) {
-                future.complete(result);
-                if (callback != null) {
-                    callback.completed(result);
-                }
+            // The listener gives the callback no outcome after a cancel, so report the cancel here, once.
+            if (callback != null && future.isCancelled()) {
+                callback.failed(clientException(e, null));
             }
         });
+        final OutputStreamRequestContent contentOut = attachEntity(invocation, request);
+
+        request.send(new AsyncResponseListener<>(invocation, buffered, callback, extractor, future, asyncExecutor, client,
+                contentOut));
+        writeEntity(invocation, request, contentOut, asyncExecutor);
         return future;
     }
 
     /**
      * Builds and configures a {@link Request} from the given invocation -- headers, multipart boundary, timeouts,
      * redirects. Shared by both the synchronous ({@link #invoke(Invocation)}) and asynchronous ({@link #doSubmit})
-     * call paths; the entity body, if any, is attached and written by the caller, since whether that write belongs on
-     * the calling thread or a background executor depends on which path is calling.
+     * call paths; the entity body, if any, is attached by {@link #attachEntity} and written by {@link #writeEntity}.
      */
     private Request prepareRequest(final ClientInvocation invocation) {
         final Request request = client.newRequest(invocation.getUri());
@@ -291,35 +253,57 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
     }
 
     /**
-     * Attaches the invocation's entity, if any, to {@code request} and schedules the body write on {@code asyncExecutor}.
-     * This always runs on the executor, even for the synchronous {@link #invoke(Invocation)} path, because the write
-     * must happen concurrently with reading the response (see the note in {@link #invoke(Invocation)}), not
-     * sequentially before it.
+     * Attaches the invocation's entity, if any, to {@code request} as the request content.
+     *
+     * @return the request content, or {@code null} if the invocation has no entity
      */
-    private void attachEntity(final ClientInvocation invocation, final Request request, final ExecutorService asyncExecutor) {
-        final Object entity = invocation.getEntity();
-        if (entity == null) {
-            return;
+    private static OutputStreamRequestContent attachEntity(final ClientInvocation invocation, final Request request) {
+        if (invocation.getEntity() == null) {
+            return null;
         }
         final OutputStreamRequestContent contentOut = new OutputStreamRequestContent(
                 Objects.toString(invocation.getHeaders().getMediaType(), null));
-        // A rejection here (executor shut down before the body task is queued) escapes on the
-        // calling thread; abort the request instead so the listener that sends it is notified of the
-        // failure, rather than leaving the exchange to complete as if there were no body.
+        request.body(contentOut);
+        return contentOut;
+    }
+
+    /**
+     * Schedules the body write of a sent {@code request} on {@code asyncExecutor}. This always runs on the executor,
+     * even for the synchronous {@link #invoke(Invocation)} path, because the write must happen concurrently with
+     * reading the response (see the note in {@link #invoke(Invocation)}), not sequentially before it. It runs after
+     * the send, so that a failure of the writer reaches the exchange of the request, also while the exchange waits in
+     * the destination queue.
+     */
+    private static void writeEntity(final ClientInvocation invocation, final Request request,
+            final OutputStreamRequestContent contentOut, final ExecutorService asyncExecutor) {
+        if (contentOut == null) {
+            return;
+        }
         try {
             asyncExecutor.execute(() -> {
+                final FlushOnCloseOutputStream bodyOut = new FlushOnCloseOutputStream(contentOut.getOutputStream());
                 try {
-                    try (OutputStream bodyOut = contentOut.getOutputStream()) {
-                        invocation.writeRequestBody(bodyOut);
-                    }
+                    invocation.writeRequestBody(bodyOut);
+                    bodyOut.finish();
                 } catch (Throwable t) {
-                    request.abort(t);
+                    if (bodyOut.failed) {
+                        // Jetty's stream failed. Jetty failed the request too, unless the cause was an interrupt or a
+                        // bad argument. A failed request could reach the next exchange of the conversation, such as
+                        // the request that follows a redirect, so only the body fails here, which ends it.
+                        LOGGER.debugf(t, "The request body stream failed");
+                        contentOut.fail(t);
+                    } else {
+                        // A close would end the chunked body, and the server would accept the partial body as
+                        // complete. So the writer cannot close the stream, and its failure fails the request first.
+                        // A response that arrived can still win.
+                        LOGGER.debugf(t, "The request body writer failed");
+                        request.fail(t);
+                    }
                 }
             });
         } catch (RejectedExecutionException e) {
-            request.abort(e);
+            request.fail(e);
         }
-        request.body(contentOut);
     }
 
     /**
@@ -362,10 +346,69 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
     }
 
     /**
+     * Gives the entity writer the request body stream without its close. A close would end the chunked body, also
+     * when the writer fails after it. The stream records whether the Jetty stream itself failed.
+     */
+    private static final class FlushOnCloseOutputStream extends FilterOutputStream {
+        private boolean failed;
+
+        FlushOnCloseOutputStream(final OutputStream out) {
+            super(out);
+        }
+
+        @Override
+        public void write(final int b) throws IOException {
+            try {
+                out.write(b);
+            } catch (IOException | RuntimeException e) {
+                failed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public void write(final byte[] b, final int off, final int len) throws IOException {
+            try {
+                out.write(b, off, len);
+            } catch (IOException | RuntimeException e) {
+                failed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            try {
+                out.flush();
+            } catch (IOException | RuntimeException e) {
+                failed = true;
+                throw e;
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            flush();
+        }
+
+        /**
+         * Closes the Jetty stream, which ends the body.
+         */
+        void finish() throws IOException {
+            try {
+                out.close();
+            } catch (IOException | RuntimeException e) {
+                failed = true;
+                throw e;
+            }
+        }
+    }
+
+    /**
      * Converts Jetty's {@link HttpFields} into the {@link MultivaluedMap} shape RESTEasy's
      * {@link ClientResponse} expects.
      */
-    private MultivaluedMap<String, String> extract(final HttpFields headers) {
+    private static MultivaluedMap<String, String> extract(final HttpFields headers) {
         final MultivaluedMap<String, String> extracted = new MultivaluedHashMap<>();
         headers.forEach(h -> extracted.add(h.getName(), h.getValue()));
         return extracted;
@@ -375,7 +418,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * Builds a {@link ClientResponse} backed by {@code inputStream}, populated with {@code invocation}'s
      * mutable properties and {@code response}'s status and headers.
      */
-    private ClientResponse buildClientResponse(final ClientInvocation invocation, final Response response,
+    static ClientResponse buildClientResponse(final ClientInvocation invocation, final Response response,
             final InputStream inputStream) {
         final ClientResponse clientResponse = new JettyClientResponse(invocation.getClientConfiguration(), inputStream);
         clientResponse.setProperties(invocation.getMutableProperties());
@@ -386,12 +429,12 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
 
     /**
      * Completes {@code future} exceptionally with {@code x} and, if {@code callback} is given,
-     * invokes {@link InvocationCallback#failed(Throwable)} on it too.
+     * invokes {@link InvocationCallback#failed(Throwable)} on it too. Does nothing if {@code future}
+     * already has an outcome.
      */
-    private static <T> void failFuture(final CompletableFuture<T> future, final InvocationCallback<T> callback,
+    static <T> void failFuture(final CompletableFuture<T> future, final InvocationCallback<T> callback,
             final RuntimeException x) {
-        future.completeExceptionally(x);
-        if (callback != null) {
+        if (future.completeExceptionally(x) && callback != null) {
             callback.failed(x);
         }
     }
@@ -401,7 +444,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * {@code primary}, and returns {@code primary} so it can be passed straight to a failure
      * handler without losing the original cause.
      */
-    private static Throwable closeSuppressing(final AutoCloseable closeable, final Throwable primary) {
+    static Throwable closeSuppressing(final AutoCloseable closeable, final Throwable primary) {
         if (closeable != null) {
             try {
                 closeable.close();
@@ -419,7 +462,7 @@ public class JettyClientHttpEngine implements AsyncClientHttpEngine {
      * {@code ex} (should not normally happen) is turned into a {@link ProcessingException} wrapping
      * a fresh {@link NullPointerException} rather than throwing one directly.
      */
-    private static RuntimeException clientException(final Throwable ex, final jakarta.ws.rs.core.Response clientResponse) {
+    static RuntimeException clientException(final Throwable ex, final jakarta.ws.rs.core.Response clientResponse) {
         RuntimeException ret;
         if (ex == null) {
             final NullPointerException e = new NullPointerException();
